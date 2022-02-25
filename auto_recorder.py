@@ -17,7 +17,7 @@ class AutoRecorder:
                 list.append(motor.get())
             # append the motor speeds to the auto recording
             self.auto_record.append(list)
-        else: 
+        else: self.auto_record
             
 
                 
