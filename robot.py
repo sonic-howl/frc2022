@@ -37,6 +37,10 @@ class Robot(wpilib.TimedRobot):
     def autonomousPeriodic(self):
         self.autorecorder.playAuto()
 
+    def autonomousInit(self):
+        # Exception for Update error
+        self.robot_drive.setSafetyEnabled(False)
+        
     def teleopPeriodic(self):
         ySpeed = self.square(self.stick.getY()) * self.maxSpeed
         xSpeed = self.square(self.stick.getX() * -1 ) * self.maxSpeed

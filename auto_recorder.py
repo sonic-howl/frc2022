@@ -6,12 +6,21 @@ class AutoRecorder:
         self.auto_record = []
         # Counter for auto-playback
         self.auto_playback_counter = 0
+        # Counter for auto-recording
+        self.auto_recording_counter = 0
 
     def recordAuto(self):
-        list = []
-        for motor in self.motors:
-            list.append(motor.get())
-        self.auto_record.append(list)
+        if self.auto_recording_counter < 750:         
+            list = []
+            # for each motor in the list of motors, record the motor's speed.
+            for motor in self.motors:
+                list.append(motor.get())
+            # append the motor speeds to the auto recording
+            self.auto_record.append(list)
+        else: 
+            
+
+                
 
     def playAuto(self):
         if self.auto_playback_counter < len(self.auto_record):
@@ -19,6 +28,11 @@ class AutoRecorder:
             for i in range(len(motorvalues)):
                 self.motors[i].set(motorvalues[i])
             self.auto_playback_counter += 1
+    
+    def saveAuto(self):
+        with open('/home/lvuser/auto_record.csv', 'w') as file:
+            file.write(self.auto_record)
+
 """
         self.auto_record = [[0.3, 0.2, 1.0], [0.3, 0.2, 1.0], [0.3, 0.2, 1.0], [0.3, 0.2, 1.0]]
 """
