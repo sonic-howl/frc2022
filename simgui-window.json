@@ -16,10 +16,15 @@
       "Pos": "1151,352",
       "Size": "300,350"
     },
+    "###/LiveWindow/Ungrouped/navX-Sensor[4]": {
+      "Collapsed": "0",
+      "Pos": "877,550",
+      "Size": "320,380"
+    },
     "###/SmartDashboard/Field": {
       "Collapsed": "0",
-      "Pos": "403,371",
-      "Size": "729,428"
+      "Pos": "467,348",
+      "Size": "540,302"
     },
     "###FMS": {
       "Collapsed": "0",
@@ -28,7 +33,7 @@
     },
     "###Joysticks": {
       "Collapsed": "0",
-      "Pos": "362,840",
+      "Pos": "336,822",
       "Size": "1156,202"
     },
     "###NetworkTables": {
@@ -38,7 +43,7 @@
     },
     "###Other Devices": {
       "Collapsed": "0",
-      "Pos": "1536,-2",
+      "Pos": "1539,-36",
       "Size": "375,1042"
     },
     "###System Joysticks": {
@@ -49,7 +54,7 @@
     "###Timing": {
       "Collapsed": "0",
       "Pos": "7,225",
-      "Size": "188,157"
+      "Size": "188,186"
     },
     "Debug##Default": {
       "Collapsed": "0",
