@@ -32,7 +32,7 @@ class Robot(wpilib.TimedRobot):
         self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1) 
     
     def square(self, x):
-        return x*abs(x)
+        return x * abs(x)
 
     def autonomousPeriodic(self):
         self.autorecorder.playAuto()
@@ -45,8 +45,20 @@ class Robot(wpilib.TimedRobot):
         ySpeed = self.square(self.stick.getY()) * self.maxSpeed
         xSpeed = self.square(self.stick.getX() * -1 ) * self.maxSpeed
         zSpeed = self.square(self.stick.getZ() * -1) * self.maxSpeed
-        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed) 
+        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed, 0)
         self.autorecorder.recordAuto()
 
 if __name__ == '__main__':
     wpilib.run(Robot)
+
+"""
+if self.timer.hasPeriodPassed(0.5):
+            self.sd.putNumber("Displacement X", self.navx.getDisplacementX())
+            self.sd.putNumber("Displacement Y", self.navx.getDisplacementY())
+            self.sd.putBoolean("IsCalibrating", self.navx.isCalibrating())
+            self.sd.putBoolean("IsConnected", self.navx.isConnected())
+            self.sd.putNumber("Angle", self.navx.getAngle())
+            self.sd.putNumber("Pitch", self.navx.getPitch())
+            self.sd.putNumber("Yaw", self.navx.getYaw())
+            self.sd.putNumber("Roll", self.navx.getRoll())
+"""
