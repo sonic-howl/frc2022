@@ -62,27 +62,18 @@ class Robot(wpilib.TimedRobot):
         xSpeed = self.square(self.stick.getX() * -1 ) * self.maxSpeed
         zSpeed = self.square(self.stick.getZ() * -1) * self.maxSpeed
 
-        joystickAngle = self.stick.getDirectionDegrees()
-        gyroAngle = self.navx.getAngle()
-        difference = joystickAngle - gyroAngle
-        difference /= 180
+        difference = 0
+        # set up traction control using gyro angle and stick angle
+        if self.stick.getMagnitude() > 0.1:
+            joystickAngle = self.stick.getDirectionDegrees()
+            gyroAngle = self.navx.getAngle()
+            difference = joystickAngle - gyroAngle
+            difference /= 180
 
         self.sd.putNumber("Joystick Angle", joystickAngle)
 
-        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed, 0)
+        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed + difference, 0)
         self.autorecorder.recordAuto()
 
 if __name__ == '__main__':
     wpilib.run(Robot)
-
-"""
-if self.timer.hasPeriodPassed(0.5):
-            self.sd.putNumber("Displacement X", self.navx.getDisplacementX())
-            self.sd.putNumber("Displacement Y", self.navx.getDisplacementY())
-            self.sd.putBoolean("IsCalibrating", self.navx.isCalibrating())
-            self.sd.putBoolean("IsConnected", self.navx.isConnected())
-            self.sd.putNumber("Angle", self.navx.getAngle())
-            self.sd.putNumber("Pitch", self.navx.getPitch())
-            self.sd.putNumber("Yaw", self.navx.getYaw())
-            self.sd.putNumber("Roll", self.navx.getRoll())
-"""

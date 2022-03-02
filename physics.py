@@ -20,5 +20,8 @@ class PhysicsEngine:
         speeds = self.drivetrain.calculate(lfs, rfs, -lrs, -rrs)
         pose = self.physics_controller.drive(speeds, tm_diff)
 
+        # Update the gyro simulation
+        # -> FRC gyros are positive clockwise, but the returned pose is positive
+        #    counter-clockwise
         self.robot.navx.setAngleAdjustment(-pose.rotation().degrees() + 5)
         
