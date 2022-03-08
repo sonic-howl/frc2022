@@ -5,6 +5,8 @@ import ctre
 import wpilib.drive
 from networktables import NetworkTables
 from auto_recorder import AutoRecorder
+from wpimath.controller import PIDController
+from navx import AHRS
 
 class Robot(wpilib.TimedRobot):
     def robotInit(self):
@@ -24,18 +26,32 @@ class Robot(wpilib.TimedRobot):
         self.rrm = ctre.WPI_TalonFX(2)
         self.lrm.setInverted(True)
         self.robot_drive = wpilib.drive.MecanumDrive(self.lfm,  self.lrm, self.rfm, self.rrm)
-        self.stick = wp.Joystick(0)
         self.table = NetworkTables.getTable("Limelight")
+
+        # self.stick
+        self.stick = wp.Joystick(0)
+
+        # make navx thing
+        self.navx = AHRS.create_spi()
 
         # Auto-recorder
         self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm])
 
+        # SmartDashboard
+        self.sd = NetworkTables.getTable("SmartDashboard")
+
+        # timer
+        self.timer = wp.Timer()
+        self.timer.start()
+
     def robotPeriodic(self):
+        if self.timer.hasPeriodPassed(0.5):
+            self.sd.putNumber("Angle", self.navx.getAngle())
 
         self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1) 
     
     def square(self, x):
-        return x*abs(x)
+        return x * abs(x)
 
     def autonomousPeriodic(self):
         self.autorecorder.playAuto()
