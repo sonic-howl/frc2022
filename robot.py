@@ -1,5 +1,3 @@
-
-from turtle import heading
 import wpilib as wp
 import ctre
 import wpilib.drive
@@ -26,7 +24,7 @@ class Robot(wpilib.TimedRobot):
         self.rrm = ctre.WPI_TalonFX(2)
         self.lrm.setInverted(True)
         self.robot_drive = wpilib.drive.MecanumDrive(self.lfm,  self.lrm, self.rfm, self.rrm)
-        self.table = NetworkTables.getTable("Limelight")
+        self.table = NetworkTables.getTable("limelight")
 
         # self.stick
         self.stick = wp.Joystick(0)
@@ -55,31 +53,38 @@ class Robot(wpilib.TimedRobot):
 
     def autonomousPeriodic(self):
         self.autorecorder.playAuto()
+        self.visionTrack()
 
     def autonomousInit(self):
         # Exception for Update error
         self.robot_drive.setSafetyEnabled(False)
+        self.table.putNumber("ledMode", 3)
         
     def teleopPeriodic(self):
         
         if self.stick.getRawButton(1):
+            self.table.putNumber("ledMode", 3)
             self.visionTrack()
+
         else:
             ySpeed = self.square(self.stick.getY()) * self.maxSpeed
             xSpeed = self.square(self.stick.getX() * -1 ) * self.maxSpeed
             zSpeed = self.square(self.stick.getZ() * -1) * self.maxSpeed
             self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed) 
             self.autorecorder.recordAuto()
+            self.table.putNumber("ledMode", 1)
             
 
     def visionTrack(self):
-        tx = self.table.getNumber('tx', 0)
-
-        if tx > 1.0 :
-            self.robot_drive.driveCartesian(0, 0, .25)
+        tv = self.table.getNumber('tv', 0)
+        if tv == 1:
+            tx = self.table.getNumber('tx', 0) / 29.8
+            print(tx)
+            # if abs(tx) > 0.01:
+            self.robot_drive.driveCartesian(0, 0, -self.square(tx)) 
 
         else:
-            self.robot_drive.driveCartesian(0, 0, -.25)
+            self.robot_drive.driveCartesian(0, 0, 0)
 
         # ty = self.table.getNumber('ty', 0)
         # ta = self.table.getNumber('ta', 0)
