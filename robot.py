@@ -6,7 +6,11 @@ from auto_recorder import AutoRecorder
 from wpimath.controller import PIDController
 from navx import AHRS
 
-class Robot(wpilib.TimedRobot):
+class Robot(wp.TimedRobot):
+    def __init__(self):
+        self.period = 0.01
+        super().__init__(self.period)
+
     def robotInit(self):
 
         # Camera Vision
@@ -37,6 +41,12 @@ class Robot(wpilib.TimedRobot):
 
         # SmartDashboard
         self.sd = NetworkTables.getTable("SmartDashboard")
+
+        # tracking pid controller
+        kP = 0.6
+        kI = 0
+        kD = 0.02
+        self.trackingPID = PIDController(kP, kI, kD, self.period)
 
         # timer
         self.timer = wp.Timer()
@@ -79,10 +89,11 @@ class Robot(wpilib.TimedRobot):
         tv = self.table.getNumber('tv', 0)
         if tv == 1:
             tx = self.table.getNumber('tx', 0) / 29.8
-            print(tx)
+            self.smartBoard.putNumber("TEE EX", tx)
             # if abs(tx) > 0.01:
-            self.robot_drive.driveCartesian(0, 0, -self.square(tx)) 
-
+            # self.robot_drive.driveCartesian(0, 0, -self.square(tx))
+            zRotationCorrection = self.trackingPID.calculate(tx, 0)
+            self.robot_drive.driveCartesian(0, 0, zRotationCorrection)
         else:
             self.robot_drive.driveCartesian(0, 0, 0)
 

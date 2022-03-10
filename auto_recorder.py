@@ -17,9 +17,8 @@ class AutoRecorder:
                 list.append(motor.get())
             # append the motor speeds to the auto recording
             self.auto_record.append(list)
-        else: self.auto_record
-            
-
+        else:
+            self.saveAuto()
                 
 
     def playAuto(self):
@@ -30,7 +29,7 @@ class AutoRecorder:
             self.auto_playback_counter += 1
     
     def saveAuto(self):
-        with open('/home/lvuser/auto_record.csv', 'w') as file:
+        with open('auto_record.csv', 'w') as file:
             file.write(self.auto_record)
 
 """

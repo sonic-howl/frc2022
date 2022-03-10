@@ -13,11 +13,12 @@ class PhysicsEngine:
         # self.gyro = wpilib.simulation.AnalogGyroSim(0)
 
     def update_sim(self, now, tm_diff):
-        lfs = self.robot.lfm.get()
-        rfs = self.robot.rfm.get()
-        lrs = self.robot.lrm.get()
-        rrs = self.robot.rrm.get()
-        speeds = self.drivetrain.calculate(lfs, rfs, -lrs, -rrs)
+        lfs = -self.robot.lfm.get()
+        rfs = -self.robot.rfm.get()
+        lrs = -self.robot.lrm.get()
+        rrs = -self.robot.rrm.get()
+        # print(lfs, rfs, lrs, rrs)
+        speeds = self.drivetrain.calculate(lfs, lrs, -rfs, -rrs)
         pose = self.physics_controller.drive(speeds, tm_diff)
 
         # Update the gyro simulation
