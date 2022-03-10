@@ -66,7 +66,9 @@ class AutoRecorder:
         def save():
             with open("/home/lvuser/auto_record.csv", "w") as file:
                 for motorSpeeds in self.auto_record:
+                    # motorSpeeds ex: [[0.3, 0.2, 1.0], [0.3, 0.2, 1.0], [0.3, 0.2, 1.0], [0.3, 0.2, 1.0]]
                     for motorSpeed in motorSpeeds:
+                        # motorSpeed ex: [0.3, 0.2, 1.0]
                         file.write(str(motorSpeed) + ", ")
                     file.write("\n")
         Thread(target=save).start()
