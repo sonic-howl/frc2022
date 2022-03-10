@@ -32,7 +32,10 @@ class Robot(wp.TimedRobot):
         self.rrm = ctre.WPI_TalonFX(2)
         self.lrm.setInverted(True)
         self.robot_drive = wpilib.drive.MecanumDrive(self.lfm,  self.lrm, self.rfm, self.rrm)
-        self.table = NetworkTables.getTable("limelight")
+
+        # limelight table
+        self.limelight = NetworkTables.getTable("limelight")
+        self.limelight.putNumber("ledMode", 1)
 
         # self.stick
         self.stick = wp.Joystick(0)
@@ -66,7 +69,7 @@ class Robot(wp.TimedRobot):
     def autonomousInit(self):
         # Exception for Update error
         self.robot_drive.setSafetyEnabled(False)
-        self.table.putNumber("ledMode", 3)
+        # self.table.putNumber("ledMode", 3)
         
     def autonomousPeriodic(self):
         self.autorecorder.playAuto()
@@ -75,7 +78,7 @@ class Robot(wp.TimedRobot):
     def teleopPeriodic(self):
         
         if self.stick.getRawButton(1):
-            self.table.putNumber("ledMode", 3)
+            self.limelight.putNumber("ledMode", 3)
             self.visionTrack()
 
         else:
@@ -84,13 +87,13 @@ class Robot(wp.TimedRobot):
             zSpeed = square(self.stick.getZ() * -1) * self.maxSpeed
             self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed) 
             self.autorecorder.recordAuto()
-            self.table.putNumber("ledMode", 1)
+            self.limelight.putNumber("ledMode", 1)
             
 
     def visionTrack(self):
-        tv = self.table.getNumber('tv', 0)
+        tv = self.limelight.getNumber('tv', 0)
         if tv == 1:
-            tx = self.table.getNumber('tx', 0) / 29.8
+            tx = self.limelight.getNumber('tx', 0) / 29.8
             self.smartBoard.putNumber("TEE EX", tx)
             # if abs(tx) > 0.01:
             # self.robot_drive.driveCartesian(0, 0, -square(tx))
