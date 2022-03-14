@@ -34,7 +34,7 @@ class AutoRecorder:
 
             
     def playAuto(self):
-        if self.auto_playback_counter < len(self.auto_record):
+        if self.auto_playback_counter <= len(self.auto_record):
             motorvalues = self.auto_record[self.auto_playback_counter]
             for i in range(len(motorvalues)):
                 self.motors[i].set(motorvalues[i])
@@ -43,6 +43,7 @@ class AutoRecorder:
             # stop all motors after the recording is done
             for motor in self.motors:
                 motor.set(0)
+        
 
     def loadAuto(self):
         def load():

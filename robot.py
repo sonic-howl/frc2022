@@ -12,7 +12,7 @@ def square(x):
 
 class Robot(wp.TimedRobot):
     def __init__(self):
-        self.period = 0.02
+        self.period = 0.01
         super().__init__(self.period)
 
     def robotInit(self):
@@ -51,20 +51,26 @@ class Robot(wp.TimedRobot):
         self.sd = NetworkTables.getTable("SmartDashboard")
 
         # tracking pid controller
-        kP = 0.6
+        kP = 0.45
         kI = 0
-        kD = 0.02
+        kD = 0.06
         self.trackingPID = PIDController(kP, kI, kD, self.period)
 
         # timer
         self.timer = wp.Timer()
         self.timer.start()
+        
+        # pipeline select board
+        self.smartBoard.putNumber("pipeline", 0)
 
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
             self.sd.putNumber("Angle", self.navx.getAngle())
 
         self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1) 
+
+    def disabledPeriodic(self):
+        self.limelight.putNumber("pipeline", self.smartBoard.getNumber("pipeline", 0))
 
     def autonomousInit(self):
         # Exception for Update error
@@ -78,7 +84,9 @@ class Robot(wp.TimedRobot):
     def teleopPeriodic(self):
         
         if self.stick.getRawButton(1):
-            self.limelight.putNumber("ledMode", 3)
+            # 1 is for tracking blue, 2 for red and soon 0 for the goal
+            if self.limelight.getNumber("pipeline", 0) != 1:
+                self.limelight.putNumber("ledMode", 3)
             self.visionTrack()
 
         else:
@@ -87,7 +95,7 @@ class Robot(wp.TimedRobot):
             zSpeed = square(self.stick.getZ() * -1) * self.maxSpeed
             self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed) 
             self.autorecorder.recordAuto()
-            self.limelight.putNumber("ledMode", 1)
+            self.limelight.putNumber("ledMode", 0)
             
 
     def visionTrack(self):
