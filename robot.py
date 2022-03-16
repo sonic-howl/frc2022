@@ -44,6 +44,7 @@ class Robot(wp.TimedRobot):
 
         # make navx thing
         self.navx = AHRS.create_spi()
+        self.gyroPID = PIDController(0.05 ,0 ,0, self.period)
 
         # Auto-recorder
         self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm], self.period)
@@ -52,11 +53,8 @@ class Robot(wp.TimedRobot):
         # SmartDashboard
         self.sd = NetworkTables.getTable("SmartDashboard")
 
-        # tracking pid controller
-        kP = 0.45
-        kI = 0
-        kD = 0.06
-        self.trackingPID = PIDController(kP, kI, kD, self.period)
+        # tracking pid controller      
+        self.trackingPID = PIDController(0.45, 0, 0.06, self.period)
 
         # timer
         self.timer = wp.Timer()
@@ -85,37 +83,49 @@ class Robot(wp.TimedRobot):
         
     def teleopPeriodic(self):
 
+        # listen for pov
+        pov = self.stick.getPOV()
+        if pov != -1:
+            self.gyroPID.calculate(self.navx.getYaw(), pov)
+                    
+
         # shooting ball
         if self.stick.getRawButton(2):
             print("it works")
             
-
+        zRotationCorrection = 0
         if self.stick.getRawButton(1):
-            # 1 is for tracking blue, 2 for red and soon 0 for the goal
-            if self.limelight.getNumber("pipeline", 0) != 1:
-                self.limelight.putNumber("ledMode", 3)
-            self.visionTrack()
-
+            zRotationCorrection = self.visionTrack()
         else:
-            ySpeed = square(self.stick.getY()) * self.maxSpeed
-            xSpeed = square(self.stick.getX() * -1 ) * self.maxSpeed
-            zSpeed = square(self.stick.getZ() * -1) * self.maxSpeed
-            self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed) 
-            self.autorecorder.recordAuto()
-            self.limelight.putNumber("ledMode", 0)
+            self.limelight.putNumber("ledMode", 1)
+        
+        # ySpeed = square(self.stick.getY()) * self.maxSpeed
+        # xSpeed = square(self.stick.getX() * -1 ) * self.maxSpeed
+        # zSpeed = square(self.stick.getZ() * -1) * self.maxSpeed + zRotationCorrection
+        ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed
+        xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
+        zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
+        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed)
+        self.autorecorder.recordAuto()
+        self.limelight.putNumber("ledMode", 0)
             
 
     def visionTrack(self):
-        tv = self.limelight.getNumber('tv', 0)
+      
+        # 1 is for tracking blue, 2 for red and soon 0 for the goal
+        if self.limelight.getNumber("pipeline", 0) != 1:
+                self.limelight.putNumber("ledMode", 3)
+
+        tv = self.limelight.getNumber('tv', 0) 
+
         if tv == 1:
             tx = self.limelight.getNumber('tx', 0) / 29.8
             self.smartBoard.putNumber("TEE EX", tx)
             # if abs(tx) > 0.01:
             # self.robot_drive.driveCartesian(0, 0, -square(tx))
             zRotationCorrection = self.trackingPID.calculate(tx, 0)
-            self.robot_drive.driveCartesian(0, 0, zRotationCorrection)
-        else:
-            self.robot_drive.driveCartesian(0, 0, 0)
+            return zRotationCorrection
+        return 0
 
         # ty = self.table.getNumber('ty', 0)
         # ta = self.table.getNumber('ta', 0)
@@ -124,3 +134,4 @@ class Robot(wp.TimedRobot):
 
 if __name__ == '__main__':
     wp.run(Robot)
+
