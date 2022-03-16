@@ -32,6 +32,8 @@ class Robot(wp.TimedRobot):
         self.rrm = ctre.WPI_TalonFX(2)
         self.lrm.setInverted(True)
         self.robot_drive = wpilib.drive.MecanumDrive(self.lfm,  self.lrm, self.rfm, self.rrm)
+        # this motor is for the shooter
+        # self.shooter = ctre.WPI_TalonFX()
 
         # limelight table
         self.limelight = NetworkTables.getTable("limelight")
@@ -82,7 +84,12 @@ class Robot(wp.TimedRobot):
         # self.visionTrack()
         
     def teleopPeriodic(self):
-        
+
+        # shooting ball
+        if self.stick.getRawButton(2):
+            print("it works")
+            
+
         if self.stick.getRawButton(1):
             # 1 is for tracking blue, 2 for red and soon 0 for the goal
             if self.limelight.getNumber("pipeline", 0) != 1:
