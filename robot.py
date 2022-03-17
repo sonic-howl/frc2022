@@ -34,7 +34,7 @@ class Robot(wp.TimedRobot):
         self.lrm.setInverted(True)
         self.robot_drive = wpilib.drive.MecanumDrive(self.lfm,  self.lrm, self.rfm, self.rrm)
         # this motor is for the shooter
-        # self.shooter = ctre.WPI_TalonFX()
+        self.shooter = ctre.WPI_TalonSRX(6)
 
         # limelight table
         self.limelight = NetworkTables.getTable("limelight")
@@ -45,7 +45,7 @@ class Robot(wp.TimedRobot):
 
         # make navx thing
         self.navx = AHRS.create_spi(update_rate_hz=100)
-        self.gyroPID = PIDController(0.002 ,0 ,0, self.period)
+        self.gyroPID = PIDController(0.022 ,0 ,0.0018, self.period)
 
         # Auto-recorder
         self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm], self.period)
@@ -85,13 +85,15 @@ class Robot(wp.TimedRobot):
     def teleopPeriodic(self):
         # shooting ball
         if self.stick.getRawButton(2):
-            print("it works")
+            self.shooter.set(0.9)
+        else:
+            self.shooter.set(0)
 
         zRotationCorrection = 0
         # listen for pov
         pov = self.stick.getPOV()
         if pov != -1:
-            zRotationCorrection = self.gyroPID.calculate(self.navx.getYaw(), pov)
+            zRotationCorrection = -self.gyroPID.calculate(self.navx.getYaw(), pov)
             print(zRotationCorrection)         
         elif self.stick.getRawButton(1):
             zRotationCorrection = self.visionTrack()
