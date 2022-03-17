@@ -1,3 +1,4 @@
+from cv2 import ellipse
 import wpilib as wp
 import ctre
 import wpilib.drive
@@ -43,8 +44,8 @@ class Robot(wp.TimedRobot):
         self.stick = wp.Joystick(0)
 
         # make navx thing
-        self.navx = AHRS.create_spi()
-        self.gyroPID = PIDController(0.05 ,0 ,0, self.period)
+        self.navx = AHRS.create_spi(update_rate_hz=100)
+        self.gyroPID = PIDController(0.002 ,0 ,0, self.period)
 
         # Auto-recorder
         self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm], self.period)
@@ -65,7 +66,7 @@ class Robot(wp.TimedRobot):
 
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
-            self.sd.putNumber("Angle", self.navx.getAngle())
+            self.sd.putNumber("Angle", self.navx.getYaw())
 
         self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1) 
 
@@ -82,19 +83,17 @@ class Robot(wp.TimedRobot):
         # self.visionTrack()
         
     def teleopPeriodic(self):
-
-        # listen for pov
-        pov = self.stick.getPOV()
-        if pov != -1:
-            self.gyroPID.calculate(self.navx.getYaw(), pov)
-                    
-
         # shooting ball
         if self.stick.getRawButton(2):
             print("it works")
-            
+
         zRotationCorrection = 0
-        if self.stick.getRawButton(1):
+        # listen for pov
+        pov = self.stick.getPOV()
+        if pov != -1:
+            zRotationCorrection = self.gyroPID.calculate(self.navx.getYaw(), pov)
+            print(zRotationCorrection)         
+        elif self.stick.getRawButton(1):
             zRotationCorrection = self.visionTrack()
         else:
             self.limelight.putNumber("ledMode", 1)
@@ -106,6 +105,7 @@ class Robot(wp.TimedRobot):
         xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
         zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
         self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed)
+        # self.robot_drive.driveCartesian(0, 0, 0)
         self.autorecorder.recordAuto()
         self.limelight.putNumber("ledMode", 0)
             
