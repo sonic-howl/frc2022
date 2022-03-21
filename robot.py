@@ -64,6 +64,9 @@ class Robot(wp.TimedRobot):
         # pipeline select board
         self.smartBoard.putNumber("pipeline", 0)
 
+        # select recording 
+        self.smartBoard.putNumber("Autorecord counter", 0)
+
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
             self.sd.putNumber("Angle", self.navx.getYaw())
@@ -72,6 +75,7 @@ class Robot(wp.TimedRobot):
 
     def disabledPeriodic(self):
         self.limelight.putNumber("pipeline", self.smartBoard.getNumber("pipeline", 0))
+        self.autorecorder.auto_recording_counter = self.smartBoard.getNumber("Autorecord counter", 0)
 
     def autonomousInit(self):
         # Exception for Update error
@@ -90,20 +94,20 @@ class Robot(wp.TimedRobot):
             self.shooter.set(0)
 
         zRotationCorrection = 0
+        ySpeedCorrection = 0
         # listen for pov
         pov = self.stick.getPOV()
         if pov != -1:
             zRotationCorrection = -self.gyroPID.calculate(self.navx.getYaw(), pov)
-            print(zRotationCorrection)         
         elif self.stick.getRawButton(1):
-            zRotationCorrection = self.visionTrack()
+            ySpeedCorrection, zRotationCorrection = self.visionTrack()
         else:
             self.limelight.putNumber("ledMode", 1)
         
         # ySpeed = square(self.stick.getY()) * self.maxSpeed
         # xSpeed = square(self.stick.getX() * -1 ) * self.maxSpeed
         # zSpeed = square(self.stick.getZ() * -1) * self.maxSpeed + zRotationCorrection
-        ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed
+        ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed + ySpeedCorrection
         xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
         zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
         self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed)
@@ -119,20 +123,16 @@ class Robot(wp.TimedRobot):
                 self.limelight.putNumber("ledMode", 3)
 
         tv = self.limelight.getNumber('tv', 0) 
+        ta = self.limelight.getNumber('ta', 100)
 
         if tv == 1:
             tx = self.limelight.getNumber('tx', 0) / 29.8
-            self.smartBoard.putNumber("TEE EX", tx)
-            # if abs(tx) > 0.01:
-            # self.robot_drive.driveCartesian(0, 0, -square(tx))
+            # self.smartBoard.putNumber("TEE EX", tx)
             zRotationCorrection = self.trackingPID.calculate(tx, 0)
-            return zRotationCorrection
-        return 0
-
-        # ty = self.table.getNumber('ty', 0)
-        # ta = self.table.getNumber('ta', 0)
-        # ts = self.table.getNumber('ts', 0)
+            ySpeedCorrection = self.trackingPID.calculate(ta, 75)
+            return (ySpeedCorrection, zRotationCorrection)
             
+        return (0, 0)
 
 if __name__ == '__main__':
     wp.run(Robot)
