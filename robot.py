@@ -1,4 +1,3 @@
-from cv2 import ellipse
 import wpilib as wp
 import ctre
 import wpilib.drive
@@ -10,6 +9,18 @@ from navx import AHRS
 
 def square(x):
     return x * abs(x)
+
+def dz(y, dz=0.05):
+    if abs(y) > dz:
+        return y
+    return 0
+
+def clamp(y, min, max):
+    if y > max:
+        return max
+    if y < min:
+        return min
+    return y
 
 class Robot(wp.TimedRobot):
     def __init__(self):
@@ -46,6 +57,7 @@ class Robot(wp.TimedRobot):
         # make navx thing
         self.navx = AHRS.create_spi(update_rate_hz=100)
         self.gyroPID = PIDController(0.022 ,0 ,0.0018, self.period)
+        self.gyroPID.enableContinuousInput(-180, 180)
 
         # Auto-recorder
         self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm], self.period)
@@ -56,6 +68,10 @@ class Robot(wp.TimedRobot):
 
         # tracking pid controller      
         self.trackingPID = PIDController(0.45, 0, 0.06, self.period)
+        self.tracktionPID = PIDController(0.015, 0, 0.001, self.period)
+        self.tracktionPID.enableContinuousInput(-180, 180)
+        self.lastAngle = 0
+        self.strafeCorrectionPID = PIDController(0.12, 0, 0.012, self.period)
 
         # timer
         self.timer = wp.Timer()
@@ -72,6 +88,9 @@ class Robot(wp.TimedRobot):
             self.sd.putNumber("Angle", self.navx.getYaw())
 
         self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1) 
+        if self.stick.isConnected():
+            if self.stick.getRawButton(4):
+                self.lastAngle = self.navx.getYaw()
 
     def disabledPeriodic(self):
         self.limelight.putNumber("pipeline", self.smartBoard.getNumber("pipeline", 0))
@@ -99,17 +118,30 @@ class Robot(wp.TimedRobot):
         pov = self.stick.getPOV()
         if pov != -1:
             zRotationCorrection = -self.gyroPID.calculate(self.navx.getYaw(), pov)
+            zRotationCorrection = clamp(zRotationCorrection, -0.35, 0.35)
         elif self.stick.getRawButton(1):
             ySpeedCorrection, zRotationCorrection = self.visionTrack()
         else:
             self.limelight.putNumber("ledMode", 1)
         
-        # ySpeed = square(self.stick.getY()) * self.maxSpeed
-        # xSpeed = square(self.stick.getX() * -1 ) * self.maxSpeed
-        # zSpeed = square(self.stick.getZ() * -1) * self.maxSpeed + zRotationCorrection
-        ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed + ySpeedCorrection
-        xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
-        zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
+        ySpeed = square(dz(self.stick.getY())) * self.maxSpeed
+        xSpeed = square(dz(self.stick.getX()) * -1 ) * self.maxSpeed
+        zSpeed = square(dz(self.stick.getZ()) * -1) * self.maxSpeed + zRotationCorrection
+        # ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed + ySpeedCorrection
+        # xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
+        # zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
+
+        if self.stick.getRawButton(11):
+            ySpeed = self.strafeCorrectionPID.calculate(self.navx.getVelocityX(), 0)
+            self.smartBoard.putNumber("ySpeed correction", ySpeed)
+
+        if zSpeed == 0:
+            zSpeed = -self.tracktionPID.calculate(self.navx.getYaw(), self.lastAngle)
+            zSpeed = dz(zSpeed, 0.07)
+        
+        else:
+            self.lastAngle = self.navx.getYaw()
+
         self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed)
         # self.robot_drive.driveCartesian(0, 0, 0)
         self.autorecorder.recordAuto()
