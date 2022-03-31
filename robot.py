@@ -10,10 +10,12 @@ from navx import AHRS
 def square(x):
     return x * abs(x)
 
+
 def dz(y, dz=0.05):
     if abs(y) > dz:
         return y
     return 0
+
 
 def clamp(y, min, max):
     if y > max:
@@ -21,6 +23,7 @@ def clamp(y, min, max):
     if y < min:
         return min
     return y
+
 
 class Robot(wp.TimedRobot):
     def __init__(self):
@@ -30,11 +33,11 @@ class Robot(wp.TimedRobot):
     def robotInit(self):
 
         # Camera Vision
-        # wp.CameraServer.launch()
-        
+        wp.CameraServer.launch()
+
         self.smartBoard = NetworkTables.getTable("SmartDashboard")
         self.maxSpeed = 1
-        self.smartBoard.putNumber("Max Speed" , 1)
+        self.smartBoard.putNumber("Max Speed", 1)
 
         # Initialized the motors
         self.lfm = ctre.WPI_TalonFX(3)
@@ -56,7 +59,7 @@ class Robot(wp.TimedRobot):
 
         # make navx thing
         self.navx = AHRS.create_spi(update_rate_hz=100)
-        self.gyroPID = PIDController(0.022 ,0 ,0.0018, self.period)
+        self.gyroPID = PIDController(0.022, 0, 0.0018, self.period)
         self.gyroPID.enableContinuousInput(-180, 180)
 
         # Auto-recorder
@@ -66,7 +69,7 @@ class Robot(wp.TimedRobot):
         # SmartDashboard
         self.sd = NetworkTables.getTable("SmartDashboard")
 
-        # tracking pid controller      
+        # tracking pid controller
         self.trackingPID = PIDController(0.45, 0, 0.06, self.period)
         self.tracktionPID = PIDController(0.015, 0, 0.001, self.period)
         self.tracktionPID.enableContinuousInput(-180, 180)
@@ -76,18 +79,18 @@ class Robot(wp.TimedRobot):
         # timer
         self.timer = wp.Timer()
         self.timer.start()
-        
+
         # pipeline select board
         self.smartBoard.putNumber("pipeline", 0)
 
-        # select recording 
+        # select recording
         self.smartBoard.putNumber("Autorecord counter", 0)
 
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
             self.sd.putNumber("Angle", self.navx.getYaw())
 
-        self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1) 
+        self.maxSpeed = self.smartBoard.getNumber("Max Speed", 1)
         if self.stick.isConnected():
             if self.stick.getRawButton(4):
                 self.lastAngle = self.navx.getYaw()
@@ -100,11 +103,11 @@ class Robot(wp.TimedRobot):
         # Exception for Update error
         self.robot_drive.setSafetyEnabled(False)
         # self.table.putNumber("ledMode", 3)
-        
+
     def autonomousPeriodic(self):
         self.autorecorder.playAuto()
         # self.visionTrack()
-        
+
     def teleopPeriodic(self):
         # shooting ball
         if self.stick.getRawButton(2):
@@ -123,9 +126,9 @@ class Robot(wp.TimedRobot):
             ySpeedCorrection, zRotationCorrection = self.visionTrack()
         else:
             self.limelight.putNumber("ledMode", 1)
-        
+
         ySpeed = square(dz(self.stick.getY())) * self.maxSpeed
-        xSpeed = square(dz(self.stick.getX()) * -1 ) * self.maxSpeed
+        xSpeed = square(dz(self.stick.getX()) * -1) * self.maxSpeed
         zSpeed = square(dz(self.stick.getZ()) * -1) * self.maxSpeed + zRotationCorrection
         # ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed + ySpeedCorrection
         # xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
@@ -138,7 +141,7 @@ class Robot(wp.TimedRobot):
         if zSpeed == 0:
             zSpeed = -self.tracktionPID.calculate(self.navx.getYaw(), self.lastAngle)
             zSpeed = dz(zSpeed, 0.07)
-        
+
         else:
             self.lastAngle = self.navx.getYaw()
 
@@ -146,15 +149,14 @@ class Robot(wp.TimedRobot):
         # self.robot_drive.driveCartesian(0, 0, 0)
         self.autorecorder.recordAuto()
         self.limelight.putNumber("ledMode", 0)
-            
 
     def visionTrack(self):
-      
+
         # 1 is for tracking blue, 2 for red and soon 0 for the goal
         if self.limelight.getNumber("pipeline", 0) != 1:
-                self.limelight.putNumber("ledMode", 3)
+            self.limelight.putNumber("ledMode", 3)
 
-        tv = self.limelight.getNumber('tv', 0) 
+        tv = self.limelight.getNumber('tv', 0)
         ta = self.limelight.getNumber('ta', 100)
 
         if tv == 1:
@@ -163,9 +165,9 @@ class Robot(wp.TimedRobot):
             zRotationCorrection = self.trackingPID.calculate(tx, 0)
             ySpeedCorrection = self.trackingPID.calculate(ta, 75)
             return (ySpeedCorrection, zRotationCorrection)
-            
+
         return (0, 0)
+
 
 if __name__ == '__main__':
     wp.run(Robot)
-
