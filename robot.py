@@ -148,13 +148,14 @@ class Robot(wp.TimedRobot):
         self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed)
         # self.robot_drive.driveCartesian(0, 0, 0)
         self.autorecorder.recordAuto()
-        self.limelight.putNumber("ledMode", 0)
 
     def visionTrack(self):
 
         # 1 is for tracking blue, 2 for red and soon 0 for the goal
         if self.limelight.getNumber("pipeline", 0) != 1:
             self.limelight.putNumber("ledMode", 3)
+        else:
+            self.limelight.putNumber("ledMode", 0)
 
         tv = self.limelight.getNumber('tv', 0)
         ta = self.limelight.getNumber('ta', 100)
