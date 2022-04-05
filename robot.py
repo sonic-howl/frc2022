@@ -70,9 +70,10 @@ class Robot(wp.TimedRobot):
         self.sd = NetworkTables.getTable("SmartDashboard")
 
         # tracking pid controller
-        self.trackingPID = PIDController(0.45, 0, 0.06, self.period)
-        self.tracktionPID = PIDController(0.015, 0, 0.001, self.period)
-        self.tracktionPID.enableContinuousInput(-180, 180)
+        self.trackingPID = PIDController(0.08, 0, 0.08, self.period)
+        self.trackingRotationPID = PIDController(0.48, 0, 0.035, self.period)
+        self.tractionPID = PIDController(0.015, 0, 0.001, self.period)
+        self.tractionPID.enableContinuousInput(-180, 180)
         self.lastAngle = 0
         self.strafeCorrectionPID = PIDController(0.12, 0, 0.012, self.period)
 
@@ -86,6 +87,10 @@ class Robot(wp.TimedRobot):
         # select recording
         self.smartBoard.putNumber("Autorecord counter", 0)
 
+        self.limitSwitch = wp.DigitalInput(9)
+        
+
+
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
             self.sd.putNumber("Angle", self.navx.getYaw())
@@ -94,6 +99,7 @@ class Robot(wp.TimedRobot):
         if self.stick.isConnected():
             if self.stick.getRawButton(4):
                 self.lastAngle = self.navx.getYaw()
+
 
     def disabledPeriodic(self):
         self.limelight.putNumber("pipeline", self.smartBoard.getNumber("pipeline", 0))
@@ -127,19 +133,19 @@ class Robot(wp.TimedRobot):
         else:
             self.limelight.putNumber("ledMode", 1)
 
-        ySpeed = square(dz(self.stick.getY())) * self.maxSpeed
-        xSpeed = square(dz(self.stick.getX()) * -1) * self.maxSpeed
-        zSpeed = square(dz(self.stick.getZ()) * -1) * self.maxSpeed + zRotationCorrection
-        # ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed + ySpeedCorrection
-        # xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
-        # zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
+        # ySpeed = square(dz(self.stick.getY())) * self.maxSpeed
+        # xSpeed = square(dz(self.stick.getX()) * -1) * self.maxSpeed
+        # zSpeed = square(dz(self.stick.getZ()) * -1) * self.maxSpeed + zRotationCorrection
+        ySpeed = square(self.stick.getRawAxis(1)) * self.maxSpeed + ySpeedCorrection
+        xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
+        zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
 
-        if self.stick.getRawButton(11):
-            ySpeed = self.strafeCorrectionPID.calculate(self.navx.getVelocityX(), 0)
-            self.smartBoard.putNumber("ySpeed correction", ySpeed)
+        # if self.stick.getRawButton(11):
+        #     ySpeed = self.strafeCorrectionPID.calculate(self.navx.getVelocityX(), 0)
+        #     self.smartBoard.putNumber("ySpeed correction", ySpeed)
 
         if zSpeed == 0:
-            zSpeed = -self.tracktionPID.calculate(self.navx.getYaw(), self.lastAngle)
+            zSpeed = -self.tractionPID.calculate(self.navx.getYaw(), self.lastAngle)
             zSpeed = dz(zSpeed, 0.07)
 
         else:
@@ -148,6 +154,7 @@ class Robot(wp.TimedRobot):
         self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed)
         # self.robot_drive.driveCartesian(0, 0, 0)
         self.autorecorder.recordAuto()
+
 
     def visionTrack(self):
 
@@ -158,14 +165,14 @@ class Robot(wp.TimedRobot):
             self.limelight.putNumber("ledMode", 0)
 
         tv = self.limelight.getNumber('tv', 0)
-        ta = self.limelight.getNumber('ta', 100)
 
         if tv == 1:
             tx = self.limelight.getNumber('tx', 0) / 29.8
+            ta = self.limelight.getNumber('ta', 100)
             # self.smartBoard.putNumber("TEE EX", tx)
-            zRotationCorrection = self.trackingPID.calculate(tx, 0)
-            ySpeedCorrection = self.trackingPID.calculate(ta, 75)
-            return (ySpeedCorrection, zRotationCorrection)
+            z = self.trackingRotationPID.calculate(tx, 0)
+            y = -self.trackingPID.calculate(ta, 3)
+            return (y, z)
 
         return (0, 0)
 

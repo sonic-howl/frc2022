@@ -51,6 +51,7 @@ class AutoRecorder:
             with open("/home/lvuser/auto_record.csv", "r") as file:
                 for i in range(self.iterations):
                     line = file.readline()
+                    print("LINE", line)
                     line.rstrip(", \r\n")
                     # line.rstrip(", \n")
                     # print(line)
