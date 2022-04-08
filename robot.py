@@ -91,7 +91,7 @@ class Robot(wp.TimedRobot):
         self.sd = NetworkTables.getTable("SmartDashboard")
 
         # tracking pid controller
-        self.trackingPID = PIDController(0.2, 0, 0.06, self.period)
+        self.trackingYSpeedPID = PIDController(0.2, 0, 0.06, self.period)
         self.trackingRotationPID = PIDController(0.5, 0, 0.035, self.period)
         self.tractionPID = PIDController(0.02, 0, 0.001, self.period)
         self.tractionPID.enableContinuousInput(-180, 180)
@@ -210,7 +210,7 @@ class Robot(wp.TimedRobot):
             ta = self.limelight.getNumber('ta', 100)
             # self.smartBoard.putNumber("TEE EX", tx)
             z = self.trackingRotationPID.calculate(tx, 0)
-            y = -self.trackingPID.calculate(ta, 3)
+            y = -self.trackingYSpeedPID.calculate(ta, 3)
             return (y, z)
 
         return (0, 0)
