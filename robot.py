@@ -24,19 +24,22 @@ def clamp(y, min, max):
     if y < min:
         return min
     return y
+
 #  Pickup System for bot
 class PickUp():
     def __init__(self):
         self.raising = ctre.WPI_TalonSRX(5)
         self.spining = rev.CANSparkMax(12, rev.CANSparkMax.MotorType.kBrushless)
         # uls = upper lower switch and lls = lower upper switch
-        self.uLs = wp.DigitalInput(0)
-        self.lLs = wp.DigitalInput(1)
+        self.uLs = wp.DigitalInput(2)
+        self.lLs = wp.DigitalInput(0)
     
     def Raise(self, speed):
-        if self.uLs.get() or self.lLs.get():
+        if speed > 0 and self.lLs.get() == False:
             self.raising.set(speed)
-        else: 
+        elif speed < 0 and self.uLs.get() == True:
+            self.raising.set(speed)
+        else:
             self.raising.set(0)
     
     def spin(self, speed):
@@ -66,6 +69,8 @@ class Robot(wp.TimedRobot):
         self.robot_drive = wpilib.drive.MecanumDrive(self.lfm,  self.lrm, self.rfm, self.rrm)
         # this motor is for the shooter
         self.shooter = rev.CANSparkMax(11, rev.CANSparkMax.MotorType.kBrushless)
+        # self.hookMotor = ctre.WPI_TalonSRX(8)
+        # self.pullMotor = ctre.WPI_TalonSRX(7)
 
         # limelight table
         self.limelight = NetworkTables.getTable("limelight")
@@ -77,23 +82,20 @@ class Robot(wp.TimedRobot):
 
         # make navx thing
         self.navx = AHRS.create_spi(update_rate_hz=100)
-        self.gyroPID = PIDController(0.022, 0, 0.0018, self.period)
+        # self.gyroPID = PIDController(0.022, 0, 0.0018, self.period)
+        self.gyroPID = PIDController(0.04, 0, 0.0035, self.period)
         self.gyroPID.enableContinuousInput(-180, 180)
 
-        # Auto-recorder
-        self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm], self.period)
-        self.autorecorder.loadAuto()
 
         # SmartDashboard
         self.sd = NetworkTables.getTable("SmartDashboard")
 
         # tracking pid controller
-        self.trackingPID = PIDController(0.1, 0, 0.08, self.period)
+        self.trackingPID = PIDController(0.2, 0, 0.06, self.period)
         self.trackingRotationPID = PIDController(0.5, 0, 0.035, self.period)
         self.tractionPID = PIDController(0.02, 0, 0.001, self.period)
         self.tractionPID.enableContinuousInput(-180, 180)
         self.lastAngle = 0
-        self.strafeCorrectionPID = PIDController(0.12, 0, 0.012, self.period)
 
         # timer
         self.timer = wp.Timer()
@@ -105,10 +107,11 @@ class Robot(wp.TimedRobot):
         # select recording
         self.smartBoard.putNumber("Autorecord counter", 0)
 
-        self.limitSwitch = wp.DigitalInput(9)
-
         self.pickUp = PickUp()
-
+    
+        # Auto-recorder
+        self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm, self.pickUp.raising, self.pickUp.spining, self.shooter], self.period)
+        self.autorecorder.loadAuto()
         
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
@@ -118,6 +121,12 @@ class Robot(wp.TimedRobot):
         if self.stick.isConnected():
             if self.stick.getRawButton(4):
                 self.lastAngle = self.navx.getYaw()
+            if self.stick.getRawButton(5):
+                self.navx.reset()
+        
+        self.smartBoard.putBoolean('limitswitch uLs', self.pickUp.uLs.get())
+        self.smartBoard.putBoolean('limitswitch lLs', self.pickUp.lLs.get())
+
 
 
     def disabledPeriodic(self):
@@ -143,6 +152,11 @@ class Robot(wp.TimedRobot):
         if self.controller.getAButton():
             self.shooter.set(-0.7)
 
+        # if self.controller.getLeftBumper():
+        #     self.hookMotor.set(0.25)
+        # elif self.controller.getRightBumper():
+        #     self.pullMotor.set(0.80)
+
         zRotationCorrection = 0
         ySpeedCorrection = 0
         # listen for pov
@@ -162,10 +176,6 @@ class Robot(wp.TimedRobot):
         # xSpeed = square(self.stick.getRawAxis(0) * -1 ) * self.maxSpeed
         # zSpeed = square(self.stick.getRawAxis(4) * -1) * self.maxSpeed + zRotationCorrection
 
-        # if self.stick.getRawButton(11):
-        #     ySpeed = self.strafeCorrectionPID.calculate(self.navx.getVelocityX(), 0)
-        #     self.smartBoard.putNumber("ySpeed correction", ySpeed)
-
         if zSpeed == 0:
             zSpeed = -self.tractionPID.calculate(self.navx.getYaw(), self.lastAngle)
             zSpeed = dz(zSpeed, 0.07)
@@ -173,16 +183,21 @@ class Robot(wp.TimedRobot):
         else:
             self.lastAngle = self.navx.getYaw()
 
-        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed, self.navx.getAngle())
-        # self.robot_drive.driveCartesian(0, 0, 0)
+        # set starting angle here
+        startingAngle = 0
+        # UNTESTED
+        # this is meant to fix the problem with the vision tracking moving the wrong way because of field oriented controls
+        fieldOrientedAngle = self.navx.getAngle() + startingAngle if zRotationCorrection == 0 else 0
+        # print(zRotationCorrection, fieldOrientedAngle)
+        self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed, fieldOrientedAngle)
         self.autorecorder.recordAuto()
 
         self.pickUp.Raise(self.controller.getLeftY())
         self.pickUp.spin(self.controller.getRightY())
 
-    def visionTrack(self):
 
-        # 1 is for tracking blue, 2 for red and soon 0 for the goal
+    def visionTrack(self):
+        # 1 is for tracking blue, 2 for red
         if self.limelight.getNumber("pipeline", 0) != 1:
             self.limelight.putNumber("ledMode", 3)
         else:
