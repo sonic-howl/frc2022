@@ -26,6 +26,8 @@ def clamp(y, min, max):
     return y
 
 #  Pickup System for bot
+
+
 class PickUp():
     def __init__(self):
         self.raising = ctre.WPI_TalonSRX(5)
@@ -33,7 +35,7 @@ class PickUp():
         # uls = upper lower switch and lls = lower upper switch
         self.uLs = wp.DigitalInput(2)
         self.lLs = wp.DigitalInput(0)
-    
+
     def Raise(self, speed):
         if speed > 0 and self.lLs.get() == False:
             self.raising.set(speed)
@@ -41,10 +43,11 @@ class PickUp():
             self.raising.set(speed)
         else:
             self.raising.set(0)
-    
+
     def spin(self, speed):
         self.spining.set(speed)
-        
+
+
 class Robot(wp.TimedRobot):
     def __init__(self):
         self.period = 0.01
@@ -86,7 +89,6 @@ class Robot(wp.TimedRobot):
         self.gyroPID = PIDController(0.04, 0, 0.0035, self.period)
         self.gyroPID.enableContinuousInput(-180, 180)
 
-
         # SmartDashboard
         self.sd = NetworkTables.getTable("SmartDashboard")
 
@@ -108,11 +110,11 @@ class Robot(wp.TimedRobot):
         self.smartBoard.putNumber("Autorecord counter", 0)
 
         self.pickUp = PickUp()
-    
+
         # Auto-recorder
         self.autorecorder = AutoRecorder([self.lfm,  self.lrm, self.rfm, self.rrm, self.pickUp.raising, self.pickUp.spining, self.shooter], self.period)
         self.autorecorder.loadAuto()
-        
+
     def robotPeriodic(self):
         if self.timer.hasPeriodPassed(0.5):
             self.sd.putNumber("Angle", self.navx.getYaw())
@@ -123,11 +125,9 @@ class Robot(wp.TimedRobot):
                 self.lastAngle = self.navx.getYaw()
             if self.stick.getRawButton(5):
                 self.navx.reset()
-        
+
         self.smartBoard.putBoolean('limitswitch uLs', self.pickUp.uLs.get())
         self.smartBoard.putBoolean('limitswitch lLs', self.pickUp.lLs.get())
-
-
 
     def disabledPeriodic(self):
         self.limelight.putNumber("pipeline", self.smartBoard.getNumber("pipeline", 0))
@@ -143,25 +143,15 @@ class Robot(wp.TimedRobot):
         # self.visionTrack()
 
     def teleopPeriodic(self):
-        # shooting ball
-        lTS = -self.controller.getLeftTriggerAxis()
-        rTS = self.controller.getRightTriggerAxis()
-        speed = -(lTS + rTS)
-        self.shooter.set(speed)
-
-        if self.controller.getAButton():
-            self.shooter.set(-0.7)
-
-        # if self.controller.getLeftBumper():
-        #     self.hookMotor.set(0.25)
-        # elif self.controller.getRightBumper():
-        #     self.pullMotor.set(0.80)
-
+        # PILOT CODE
         zRotationCorrection = 0
         ySpeedCorrection = 0
         # listen for pov
         pov = self.stick.getPOV()
         if pov != -1:
+            # set pov to [-180, 180]
+            if pov > 180:
+                pov -= 360
             zRotationCorrection = -self.gyroPID.calculate(self.navx.getYaw(), pov)
             zRotationCorrection = clamp(zRotationCorrection, -0.35, 0.35)
         elif self.stick.getRawButton(1):
@@ -192,9 +182,26 @@ class Robot(wp.TimedRobot):
         self.robot_drive.driveCartesian(ySpeed, xSpeed, zSpeed, fieldOrientedAngle)
         self.autorecorder.recordAuto()
 
+        # COPILOT CODE
+        # shooting ball
+        lTS = -self.controller.getLeftTriggerAxis()
+        rTS = self.controller.getRightTriggerAxis()
+        speed = -(lTS + rTS)
+        self.shooter.set(speed)
+
+        # constant speed shooting ball
+        if self.controller.getAButton():
+            self.shooter.set(-0.7)
+
+        # raise and lower pickup
         self.pickUp.Raise(self.controller.getLeftY())
+        # spin pickup
         self.pickUp.spin(self.controller.getRightY())
 
+        # if self.controller.getLeftBumper():
+        #     self.hookMotor.set(0.25)
+        # elif self.controller.getRightBumper():
+        #     self.pullMotor.set(0.80)
 
     def visionTrack(self):
         # 1 is for tracking blue, 2 for red
